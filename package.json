@@ -1,0 +1,38 @@
+{
+  "name": "@hexlet/code",
+  "version": "1.0.0",
+  "description": "[![Actions Status](https://https://github.com/mkolotovich/backend-project-lvl3/workflows/hexlet-check/badge.svg)](https://https://github.com/mkolotovich/backend-project-lvl3/actions)",
+  "main": "src/downloadPage.js",
+  "scripts": {
+    "test": "jest",
+    "testdev": "jest --watchAll"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://https://github.com/mkolotovich/backend-project-lvl3.git"
+  },
+  "bin": {
+    "page-loader": "bin/pageLoader.js"
+  },
+  "author": "Mike Kolotovich",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://https://github.com/mkolotovich/backend-project-lvl3/issues"
+  },
+  "type": "module",
+  "homepage": "https://https://github.com/mkolotovich/backend-project-lvl3#readme",
+  "devDependencies": {
+    "@jest/globals": "^27.0.3",
+    "babel-jest": "^27.5.1",
+    "eslint": "^7.27.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.23.4",
+    "jest": "^27.0.4",
+    "jest-cli": "^27.0.4",
+    "nock": "^13.2.9"
+  },
+  "dependencies": {
+    "axios": "^0.27.2",
+    "commander": "^4.1.1"
+  }
+}
