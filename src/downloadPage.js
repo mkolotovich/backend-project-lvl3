@@ -5,8 +5,7 @@ import * as cheerio from 'cheerio';
 
 const { promises: fsp } = fs;
 
-const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
-  const $ = cheerio.load(page);
+const getImages = ($, url, fullDirPath, dirPath, prefix) => {
   const imageTag = $('img');
   const src = Array.from(imageTag).map((element) => $(element).attr('src'));
   src.forEach((el) => {
@@ -25,6 +24,83 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   $('img').each(function modify(i, elem) {
     $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
   });
+};
+
+const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
+  const linkTag = $('link');
+  const src = Array.from(linkTag).map((element) => $(element).attr('href'));
+  src.forEach((el) => {
+    if (!el.startsWith('http')) {
+      axios({
+        method: 'get',
+        url: `${url}/${el}`,
+        responseType: 'stream',
+      })
+        .then(({ data }) => {
+          const normalizedStr = path.extname(el) === '.css' ? `${prefix}${el.replace(/\//g, '-')}` : `${prefix}${el.replace(/\//g, '-')}.html`;
+          return fsp.writeFile(path.join(fullDirPath, normalizedStr), data);
+        });
+    }
+  });
+  $('link').each(function modify(i, elem) {
+    if (!$(elem).attr('href').startsWith('http')) {
+      const normalizedStr = path.extname($(elem).attr('href')) === '.css' ? `${$(elem).attr('href').replace(/\//g, '-')}` : `${$(elem).attr('href').replace(/\//g, '-')}.html`;
+      $(this).attr('href', `${dirPath}/${prefix}${normalizedStr}`);
+    }
+  });
+};
+
+const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
+  const scriptTag = $('script');
+  const pageUrl = new URL(url);
+  const src = Array.from(scriptTag).map((element) => $(element).attr('src'));
+  src.forEach((el) => {
+    if (el !== undefined) {
+      if (!el.startsWith('http')) {
+        axios({
+          method: 'get',
+          url: `${url}/${el}`,
+          responseType: 'stream',
+        })
+          .then(({ data }) => {
+            const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
+            return fsp.writeFile(path.join(fullDirPath, normalizedStr), data);
+          });
+      } else {
+        const elUrl = new URL(el);
+        if (pageUrl.hostname === elUrl.hostname) {
+          axios({
+            method: 'get',
+            url: `${el}`,
+            responseType: 'stream',
+          })
+            .then(({ data }) => {
+              const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
+              return fsp.writeFile(path.join(fullDirPath, normalizedStr), data);
+            });
+        }
+      }
+    }
+  });
+  $('script').each(function modify(i, elem) {
+    if ($(elem).attr('src') !== undefined) {
+      if (!$(elem).attr('src').startsWith('http')) {
+        $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
+      } else {
+        const elUrl = new URL($(elem).attr('src'));
+        if (pageUrl.hostname === elUrl.hostname) {
+          $(this).attr('src', `${dirPath}/${prefix}${elUrl.pathname.replace(/\//g, '-')}`);
+        }
+      }
+    }
+  });
+};
+
+const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
+  const $ = cheerio.load(page);
+  getImages($, url, fullDirPath, dirPath, prefix);
+  getLinks($, url, fullDirPath, dirPath, prefix);
+  getScripts($, url, fullDirPath, dirPath, prefix);
   return $.html();
 };
 

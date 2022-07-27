@@ -17,11 +17,27 @@ let dir;
 beforeEach(async () => {
   nock('https://ru.hexlet.io')
     .get('/courses')
-    .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
+    .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
   nock('https://ru.hexlet.io')
     .get('/courses//assets/professions/nodejs.png')
     .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
+  nock('https://ru.hexlet.io')
+    .get('/courses//assets/application.css')
+    .reply(200, await fsp.readFile(getFixturePath('styles.css'), 'utf-8'));
+  nock('https://ru.hexlet.io')
+    .get('/courses//courses')
+    .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
+  nock('https://ru.hexlet.io')
+    .get('/packs/js/runtime.js')
+    .reply(200);
   dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
+});
+
+test('save assets', async () => {
+  await downloadPage('https://ru.hexlet.io/courses', dir);
+  const css = await fsp.readFile(getFixturePath('styles.css'));
+  const copydCss = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'));
+  expect(css).toEqual(copydCss);
 });
 
 test('save file', async () => {
@@ -38,7 +54,7 @@ test('return right object', async () => {
 
 test('modify page', async () => {
   await downloadPage('https://ru.hexlet.io/courses', dir);
-  const fileExpected = await fsp.readFile(getFixturePath('downloaded.html'), 'utf-8');
+  const fileExpected = await fsp.readFile(getFixturePath('downloadedWithAliases.html'), 'utf-8');
   const file = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses.html'), 'utf-8');
   expect(file).toEqual(fileExpected);
 });
