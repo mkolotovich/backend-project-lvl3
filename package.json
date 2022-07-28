@@ -5,7 +5,7 @@
   "main": "src/downloadPage.js",
   "scripts": {
     "test": "jest",
-    "testdev": "jest --watchAll"
+    "testWithDebug": "set DEBUG=nock.* & jest"
   },
   "repository": {
     "type": "git",

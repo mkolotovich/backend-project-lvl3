@@ -2,8 +2,11 @@ import * as path from 'path';
 import fs from 'fs';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import 'axios-debug-log';
+import debug from 'debug';
 
 const { promises: fsp } = fs;
+const logPageLoader = debug('page-loader');
 
 const getImages = ($, url, fullDirPath, dirPath, prefix) => {
   const imageTag = $('img');
@@ -16,6 +19,7 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
         responseType: 'stream',
       })
         .then(({ data }) => {
+          logPageLoader(`${url}/${el}`);
           const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
           return fsp.writeFile(path.join(fullDirPath, normalizedStr), data);
         });
@@ -37,6 +41,7 @@ const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
         responseType: 'stream',
       })
         .then(({ data }) => {
+          logPageLoader(`${url}/${el}`);
           const normalizedStr = path.extname(el) === '.css' ? `${prefix}${el.replace(/\//g, '-')}` : `${prefix}${el.replace(/\//g, '-')}.html`;
           return fsp.writeFile(path.join(fullDirPath, normalizedStr), data);
         });
@@ -63,6 +68,7 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
           responseType: 'stream',
         })
           .then(({ data }) => {
+            logPageLoader(`${url}/${el}`);
             const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
             return fsp.writeFile(path.join(fullDirPath, normalizedStr), data);
           });
@@ -112,7 +118,10 @@ export default (url, dir = process.cwd()) => {
   const filePath = path.resolve(process.cwd(), dir, fileName);
   const dirPath = path.resolve(process.cwd(), dir, dirName);
   return fsp.mkdir(dirPath)
-    .then(() => axios.get(url))
+    .then(() => {
+      logPageLoader(url);
+      return axios.get(url);
+    })
     .then(({ data }) => {
       const modifiedPage = getAssets(data, url, dirPath, dirName, assetsName);
       fsp.writeFile(filePath, modifiedPage);
