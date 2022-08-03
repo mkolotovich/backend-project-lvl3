@@ -13,6 +13,10 @@ program
   .arguments('<url>')
   .action((url) => {
     const { output } = program.opts();
-    downloadPage(url, output);
+    downloadPage(url, output)
+      .catch((err) => {
+        console.error('error!!!', err.message);
+        throw err && process.exit(1);
+      });
   })
   .parse(process.argv);
