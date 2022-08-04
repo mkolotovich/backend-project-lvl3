@@ -14,6 +14,10 @@ program
   .action((url) => {
     const { output } = program.opts();
     downloadPage(url, output)
+      .then((obj) => {
+        console.log(`Page was successfully downloaded into ${obj.filepath}`);
+        process.exitCode = 0;
+      })
       .catch((err) => {
         console.error('error!!!', err.message);
         throw err && process.exit(1);

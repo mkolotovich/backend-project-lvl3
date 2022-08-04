@@ -160,9 +160,7 @@ export default (url, dir = process.cwd()) => {
     })
     .then((assets) => {
       fsp.writeFile(filePath, assets);
-      console.log(`Page was successfully downloaded into ${filePath}`);
       const obj = { filepath: filePath };
-      process.exitCode = 0;
       return obj;
     });
 };

@@ -1,4 +1,4 @@
-import { test, expect } from '@jest/globals';
+import { test, expect, describe } from '@jest/globals';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -43,12 +43,17 @@ const dataWithImage = async () => {
   dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 };
 
-test('save assets', async () => {
-  await data();
-  await downloadPage('https://ru.hexlet.io/courses', dir);
-  const css = await fsp.readFile(getFixturePath('styles.css'));
-  const copydCss = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'));
-  expect(css).toEqual(copydCss);
+describe.each([
+  ['styles.css', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
+  ['downloadedWithAliases.html', '', 'ru-hexlet-io-courses.html'],
+  ['nodejs.png', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
+])('downloadPage(%s, %s, %s)', (a, b, expected) => {
+  test(`returns ${expected}`, async () => {
+    await data();
+    await downloadPage('https://ru.hexlet.io/courses', dir);
+    const source = await fsp.readFile(getFixturePath(a));
+    expect(source).toEqual(await fsp.readFile(path.resolve(dir, b, expected)));
+  });
 });
 
 test('save file', async () => {
@@ -65,28 +70,12 @@ test('return right object', async () => {
   expect(await downloadPage('https://ru.hexlet.io/courses', '/usr')).toEqual(object);
 });
 
-test('modify page', async () => {
-  await data();
-  await downloadPage('https://ru.hexlet.io/courses', dir);
-  const fileExpected = await fsp.readFile(getFixturePath('downloadedWithAliases.html'), 'utf-8');
-  const file = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses.html'), 'utf-8');
-  expect(file).toEqual(fileExpected);
-});
-
 test('modify page with image', async () => {
   await dataWithImage();
   await downloadPage('https://ru.hexlet.io/courses', dir);
   const fileExpected = await fsp.readFile(getFixturePath('downloaded.html'), 'utf-8');
   const file = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses.html'), 'utf-8');
   expect(file).toEqual(fileExpected);
-});
-
-test('save image', async () => {
-  await data();
-  await downloadPage('https://ru.hexlet.io/courses', dir);
-  const image = await fsp.readFile(getFixturePath('nodejs.png'));
-  const copydImage = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'));
-  expect(image).toEqual(copydImage);
 });
 
 test('network error', () => {
