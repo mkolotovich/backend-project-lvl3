@@ -133,7 +133,7 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
 
 export default (url, dir = process.cwd()) => {
   const myURL = new URL(url);
-  const fileName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}${myURL.pathname.replace('/', '-')}.html` : `${myURL.hostname.replace(/\./g, '-')}.html`;
+  const fileName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}${myURL.pathname.replace(/\//g, '-')}.html` : `${myURL.hostname.replace(/\./g, '-')}.html`;
   const dirName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}${myURL.pathname.replace(/\//g, '-')}_files` : `${myURL.hostname.replace(/\./g, '-')}_files`;
   const assetsName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}` : `${myURL.hostname.replace(/\./g, '-')}-`;
   const filePath = path.resolve(process.cwd(), dir, fileName);
