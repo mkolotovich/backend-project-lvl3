@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import 'axios-debug-log';
 import debug from 'debug';
+import Listr from 'listr';
 
 const { promises: fsp } = fs;
 const logPageLoader = debug('page-loader');
@@ -30,6 +31,15 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
           if (path.extname(el) === '.png' || path.extname(el) === '.jpg') {
             logPageLoader(`${url}/${el}`);
             const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
+            const tasks = new Listr([
+              {
+                title: `${el}`,
+                task: () => Promise.resolve(response),
+              },
+            ], { concurrent: true });
+            tasks.run().catch((err) => {
+              console.error(err);
+            });
             return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
           }
           return response;
@@ -56,6 +66,15 @@ const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
           }
           logPageLoader(`${url}/${el}`);
           const normalizedStr = path.extname(el) === '.css' ? `${prefix}${el.replace(/\//g, '-')}` : `${prefix}${el.replace(/\//g, '-')}.html`;
+          const tasks = new Listr([
+            {
+              title: `${el}`,
+              task: () => Promise.resolve(response),
+            },
+          ], { concurrent: true });
+          tasks.run().catch((err) => {
+            console.error(err);
+          });
           return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
         });
     }
@@ -85,6 +104,15 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
           .then((response) => {
             logPageLoader(`${url}/${el}`);
             const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
+            const tasks = new Listr([
+              {
+                title: `${el}`,
+                task: () => Promise.resolve(response),
+              },
+            ], { concurrent: true });
+            tasks.run().catch((err) => {
+              console.error(err);
+            });
             return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
           });
       }
