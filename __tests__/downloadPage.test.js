@@ -67,7 +67,7 @@ test('return right object', async () => {
   await data();
   const file = await fsp.readFile(getFixturePath('expected.json'), 'utf-8');
   const object = JSON.parse(file);
-  expect(await downloadPage('https://ru.hexlet.io/courses', '/usr')).toEqual(object);
+  expect(await downloadPage('https://ru.hexlet.io/courses', '/var/tmp')).toEqual(object);
 });
 
 test('modify page with image', async () => {
