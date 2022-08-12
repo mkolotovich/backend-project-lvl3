@@ -20,9 +20,7 @@ program
       })
       .catch((err) => {
         console.error('error!!!', err.message);
-        // throw err && process.exit(1);
-        process.exitCode = 1;
-        throw err;
+        throw err && process.exit(1);
       });
   })
   .parse(process.argv);

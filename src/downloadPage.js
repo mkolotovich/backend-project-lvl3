@@ -167,10 +167,13 @@ export default (url, dir = process.cwd()) => {
     })
     .catch((error) => {
       if (error.response) {
+        process.exitCode = 1;
         throw new Error(`network error! ${url} responded with status - ${error.response.status}`);
       } else if (error.request) {
+        process.exitCode = 1;
         throw new Error(`network error! ${url} not responded`);
       } else {
+        process.exitCode = 1;
         throw new Error(error.message);
       }
     })
