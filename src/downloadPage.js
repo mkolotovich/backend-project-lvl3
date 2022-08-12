@@ -11,6 +11,18 @@ const logPageLoader = debug('page-loader');
 
 const successCode = 200;
 
+const showProgress = (el, response) => {
+  const tasks = new Listr([
+    {
+      title: `${el}`,
+      task: () => Promise.resolve(response),
+    },
+  ], { concurrent: true });
+  tasks.run().catch((err) => {
+    console.error(err);
+  });
+};
+
 const getImages = ($, url, fullDirPath, dirPath, prefix) => {
   const imageTag = $('img');
   const src = Array.from(imageTag).map((element) => $(element).attr('src'));
@@ -31,15 +43,7 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
           if (path.extname(el) === '.png' || path.extname(el) === '.jpg') {
             logPageLoader(`${url}/${el}`);
             const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
-            const tasks = new Listr([
-              {
-                title: `${el}`,
-                task: () => Promise.resolve(response),
-              },
-            ], { concurrent: true });
-            tasks.run().catch((err) => {
-              console.error(err);
-            });
+            showProgress(el, response);
             return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
           }
           return response;
@@ -66,15 +70,7 @@ const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
           }
           logPageLoader(`${url}/${el}`);
           const normalizedStr = path.extname(el) === '.css' ? `${prefix}${el.replace(/\//g, '-')}` : `${prefix}${el.replace(/\//g, '-')}.html`;
-          const tasks = new Listr([
-            {
-              title: `${el}`,
-              task: () => Promise.resolve(response),
-            },
-          ], { concurrent: true });
-          tasks.run().catch((err) => {
-            console.error(err);
-          });
+          showProgress(el, response);
           return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
         });
     }
@@ -104,15 +100,7 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
           .then((response) => {
             logPageLoader(`${url}/${el}`);
             const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
-            const tasks = new Listr([
-              {
-                title: `${el}`,
-                task: () => Promise.resolve(response),
-              },
-            ], { concurrent: true });
-            tasks.run().catch((err) => {
-              console.error(err);
-            });
+            showProgress(el, response);
             return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
           });
       }
