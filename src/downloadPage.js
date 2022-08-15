@@ -30,10 +30,11 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
     $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
   });
   const promises = src.map((el) => {
+    const requestUrl = el.startsWith('/') ? el.slice(1) : el;
     if (!el.startsWith('http')) {
       axios({
         method: 'get',
-        url: `${url}/${el}`,
+        url: `${url}/${requestUrl}`,
         responseType: 'stream',
       })
         .then((response) => {
@@ -43,7 +44,15 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
           if (path.extname(el) === '.png' || path.extname(el) === '.jpg') {
             logPageLoader(`${url}/${el}`);
             const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
-            showProgress(el, response);
+            const tasks = new Listr([
+              {
+                title: `${el}`,
+                task: () => Promise.resolve(response),
+              },
+            ], { concurrent: true });
+            tasks.run().catch((err) => {
+              console.error(err);
+            });
             return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
           }
           return response;
@@ -58,10 +67,11 @@ const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
   const linkTag = $('link');
   const src = Array.from(linkTag).map((element) => $(element).attr('href'));
   const promises = src.map((el) => {
+    const requestUrl = el.startsWith('/') ? el.slice(1) : el;
     if (!el.startsWith('http')) {
       return axios({
         method: 'get',
-        url: `${url}/${el}`,
+        url: `${url}/${requestUrl}`,
         responseType: 'stream',
       })
         .then((response) => {
@@ -70,7 +80,15 @@ const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
           }
           logPageLoader(`${url}/${el}`);
           const normalizedStr = path.extname(el) === '.css' ? `${prefix}${el.replace(/\//g, '-')}` : `${prefix}${el.replace(/\//g, '-')}.html`;
-          showProgress(el, response);
+          const tasks = new Listr([
+            {
+              title: `${el}`,
+              task: () => Promise.resolve(response),
+            },
+          ], { concurrent: true });
+          tasks.run().catch((err) => {
+            console.error(err);
+          });
           return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
         });
     }
@@ -143,8 +161,8 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   const links = getLinks($, url, fullDirPath, dirPath, prefix);
   const scripts = getScripts($, url, fullDirPath, dirPath, prefix);
   return Promise.all([images, links, scripts])
-    .then(() => $.html());
-  // .catch((error) => { throw new Error(error.message); });
+    .then(() => $.html())
+    .catch((error) => { throw new Error(error.message); });
 };
 
 export default (url, dir = process.cwd()) => {
