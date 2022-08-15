@@ -143,8 +143,8 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   const links = getLinks($, url, fullDirPath, dirPath, prefix);
   const scripts = getScripts($, url, fullDirPath, dirPath, prefix);
   return Promise.all([images, links, scripts])
-    .then(() => $.html())
-    .catch((error) => { throw new Error(error.message); });
+    .then(() => $.html());
+  // .catch((error) => { throw new Error(error.message); });
 };
 
 export default (url, dir = process.cwd()) => {
@@ -159,9 +159,8 @@ export default (url, dir = process.cwd()) => {
       logPageLoader(url);
       if (response.status !== successCode) {
         throw new Error(`network error! ${url} responded with status - ${response.status}`);
-      } else {
-        fsp.mkdir(dirPath);
       }
+      fsp.mkdir(dirPath);
       return getAssets(response.data, url, dirPath, dirName, assetsName);
     })
     .catch((error) => {
