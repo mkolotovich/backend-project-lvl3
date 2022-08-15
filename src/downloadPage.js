@@ -30,11 +30,11 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
     $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
   });
   const promises = src.map((el) => {
-    const requestUrl = el.startsWith('/') ? el.slice(1) : el;
+    const requestUrl = new URL(el, url);
     if (!el.startsWith('http')) {
       axios({
         method: 'get',
-        url: `${url}/${requestUrl}`,
+        url: `${requestUrl}`,
         responseType: 'stream',
       })
         .then((response) => {
@@ -67,11 +67,11 @@ const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
   const linkTag = $('link');
   const src = Array.from(linkTag).map((element) => $(element).attr('href'));
   const promises = src.map((el) => {
-    const requestUrl = el.startsWith('/') ? el.slice(1) : el;
+    const requestUrl = new URL(el, url);
     if (!el.startsWith('http')) {
       return axios({
         method: 'get',
-        url: `${url}/${requestUrl}`,
+        url: `${requestUrl}`,
         responseType: 'stream',
       })
         .then((response) => {
