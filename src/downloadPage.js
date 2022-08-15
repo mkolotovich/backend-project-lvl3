@@ -154,26 +154,22 @@ export default (url, dir = process.cwd()) => {
   const assetsName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}` : `${myURL.hostname.replace(/\./g, '-')}-`;
   const filePath = path.resolve(process.cwd(), dir, fileName);
   const dirPath = path.resolve(process.cwd(), dir, dirName);
-  return fsp.mkdir(dirPath)
-    .then(() => {
-      logPageLoader(url);
-      return axios.get(url);
-    })
+  return axios.get(url)
     .then((response) => {
+      logPageLoader(url);
       if (response.status !== successCode) {
         throw new Error(`network error! ${url} responded with status - ${response.status}`);
+      } else {
+        fsp.mkdir(dirPath);
       }
       return getAssets(response.data, url, dirPath, dirName, assetsName);
     })
     .catch((error) => {
       if (error.response) {
-        process.exitCode = 1;
         throw new Error(`network error! ${url} responded with status - ${error.response.status}`);
       } else if (error.request) {
-        process.exitCode = 1;
         throw new Error(`network error! ${url} not responded`);
       } else {
-        process.exitCode = 1;
         throw new Error(error.message);
       }
     })
