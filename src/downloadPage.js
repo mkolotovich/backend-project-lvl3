@@ -4,24 +4,11 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import 'axios-debug-log';
 import debug from 'debug';
-import Listr from 'listr';
 
 const { promises: fsp } = fs;
 const logPageLoader = debug('page-loader');
 
 const successCode = 200;
-
-const showProgress = (el, response) => {
-  const tasks = new Listr([
-    {
-      title: `${el}`,
-      task: () => Promise.resolve(response),
-    },
-  ], { concurrent: true });
-  tasks.run().catch((err) => {
-    console.error(err);
-  });
-};
 
 const getImages = ($, url, fullDirPath, dirPath, prefix) => {
   const imageTag = $('img');
@@ -103,8 +90,8 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
           .then((response) => {
             logPageLoader(`${url}/${el}`);
             const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
-            showProgress(el, response);
-            return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
+            fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
+            return response;
           });
       }
       const elUrl = new URL(el);
@@ -137,7 +124,7 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
       }
     }
   });
-  return Promise.all(promises);
+  return promises;
 };
 
 const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
@@ -145,10 +132,7 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   const images = getImages($, url, fullDirPath, dirPath, prefix);
   const links = getLinks($, url, fullDirPath, dirPath, prefix);
   const scripts = getScripts($, url, fullDirPath, dirPath, prefix);
-  // return Promise.all([images, links, scripts])
-  //   .then(() => $.html())
-  //   .catch((error) => { throw new Error(error.message); });
-  return [$.html(), images, links];
+  return [$.html(), images, links, scripts];
 };
 
 export default (url, dir = process.cwd()) => {
@@ -164,9 +148,10 @@ export default (url, dir = process.cwd()) => {
       if (response.status !== successCode) {
         throw new Error(`network error! ${url} responded with status - ${response.status}`);
       }
-      fsp.mkdir(dirPath);
-      return getAssets(response.data, url, dirPath, dirName, assetsName);
+      return response;
     })
+    .then((response) => fsp.mkdir(dirPath)
+      .then(() => getAssets(response.data, url, dirPath, dirName, assetsName)))
     .catch((error) => {
       if (error.response) {
         throw new Error(`network error! ${url} responded with status - ${error.response.status}`);
@@ -177,11 +162,9 @@ export default (url, dir = process.cwd()) => {
       }
     })
     .then((assets) => {
-      const [html, images, links] = assets;
-      // fsp.writeFile(filePath, assets);
+      const [html, images, links, scripts] = assets;
       fsp.writeFile(filePath, html);
       const obj = { filepath: filePath };
-      // return obj;
-      return [obj, images, links];
+      return [obj, images, links, scripts];
     });
 };

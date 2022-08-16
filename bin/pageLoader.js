@@ -16,8 +16,8 @@ program
     const { output } = program.opts();
     downloadPage(url, output)
       .then((obj) => {
-        const [object, images, links] = obj;
-        Promise.all([...images, ...links])
+        const [object, images, links, scripts] = obj;
+        Promise.all([...images, ...links, ...scripts])
           .then((items) => {
             items.forEach((el) => {
               if (el !== undefined) {
