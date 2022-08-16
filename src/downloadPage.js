@@ -59,39 +59,58 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
     //     });
     // }
     // return el;
-    const tasks = new Listr([
-      {
-        title: `${el}`,
-        // skip: () => {
-        //   if (path.extname(el) !== '.png' && path.extname(el) !== '.jpg') {
-        //     return 'image non png or jpg format';
-        //   }
-        //   return false;
-        // },
-        task: () => Promise.resolve(
-          axios({
-            method: 'get',
-            url: `${requestUrl}`,
-            responseType: 'stream',
-          })
-            .then((response) => {
-              if (response.status !== successCode) {
-                throw new Error(`network error! ${url}/${el} responded with status - ${response.status}`);
-              }
-              if (path.extname(el) === '.png' || path.extname(el) === '.jpg') {
-                logPageLoader(`${url}/${el}`);
-                const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
-                return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
-              }
-              return response;
-            }),
-        ),
-      },
-    ], { concurrent: true });
-    tasks.run();
-    return tasks;
+    // const tasks = new Listr([
+    //   {
+    //     title: `${el}`,
+    //     task: () => {
+    //       if (!el.startsWith('http')) {
+    //         axios({
+    //           method: 'get',
+    //           url: `${requestUrl}`,
+    //           responseType: 'stream',
+    //         })
+    //           .then((response) => {
+    //             if (response.status !== successCode) {
+    //               throw new Error(`network error! ${url}/${el} responded with status - ${response.status}`);
+    //             }
+    //             if (path.extname(el) === '.png' || path.extname(el) === '.jpg') {
+    //               logPageLoader(`${url}/${el}`);
+    //               const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
+    //               return fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
+    //             }
+    //             return response;
+    //           });
+    //       }
+    //       return el;
+    //     },
+    //   },
+    // ], { concurrent: true });
+    if (!el.startsWith('http')) {
+      return axios({
+        method: 'get',
+        url: `${requestUrl}`,
+        responseType: 'stream',
+      })
+        .then((response) => {
+          if (response.status !== successCode) {
+            throw new Error(`network error! ${url}/${el} responded with status - ${response.status}`);
+          }
+          if (path.extname(el) === '.png' || path.extname(el) === '.jpg') {
+            logPageLoader(`${url}/${el}`);
+            const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
+            fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
+          } else {
+            return undefined;
+          }
+          return response;
+        });
+    }
+    return el;
+    // tasks.run();
+    // return tasks;
   });
-  return Promise.all(promises);
+  // return Promise.all(promises);
+  return promises;
 };
 
 const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
@@ -191,9 +210,10 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   const images = getImages($, url, fullDirPath, dirPath, prefix);
   const links = getLinks($, url, fullDirPath, dirPath, prefix);
   const scripts = getScripts($, url, fullDirPath, dirPath, prefix);
-  return Promise.all([images, links, scripts])
-    .then(() => $.html())
-    .catch((error) => { throw new Error(error.message); });
+  // return Promise.all([images, links, scripts])
+  //   .then(() => $.html())
+  //   .catch((error) => { throw new Error(error.message); });
+  return [$.html(), images];
 };
 
 export default (url, dir = process.cwd()) => {
@@ -222,8 +242,11 @@ export default (url, dir = process.cwd()) => {
       }
     })
     .then((assets) => {
-      fsp.writeFile(filePath, assets);
+      const [html, images] = assets;
+      // fsp.writeFile(filePath, assets);
+      fsp.writeFile(filePath, html);
       const obj = { filepath: filePath };
-      return obj;
+      // return obj;
+      return [obj, images];
     });
 };
