@@ -64,7 +64,7 @@ const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
           return response;
         });
     }
-    return el;
+    return undefined;
   });
   $('link').each(function modify(i, elem) {
     if (!$(elem).attr('href').startsWith('http')) {
@@ -110,7 +110,7 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
           });
       }
     }
-    return el;
+    return undefined;
   });
   $('script').each(function modify(i, elem) {
     if ($(elem).attr('src') !== undefined) {
