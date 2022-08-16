@@ -19,13 +19,13 @@ const data = async () => {
     .get('/courses')
     .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
   nock('https://ru.hexlet.io')
-    .get('/courses//assets/professions/nodejs.png')
+    .get('/assets/professions/nodejs.png')
     .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
   nock('https://ru.hexlet.io')
-    .get('/courses//assets/application.css')
+    .get('/assets/application.css')
     .reply(200, await fsp.readFile(getFixturePath('styles.css'), 'utf-8'));
   nock('https://ru.hexlet.io')
-    .get('/courses//courses')
+    .get('/courses')
     .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
   nock('https://ru.hexlet.io')
     .get('/packs/js/runtime.js')
@@ -38,7 +38,7 @@ const dataWithImage = async () => {
     .get('/courses')
     .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
   nock('https://ru.hexlet.io')
-    .get('/courses//assets/professions/nodejs.png')
+    .get('/assets/professions/nodejs.png')
     .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
   dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 };
