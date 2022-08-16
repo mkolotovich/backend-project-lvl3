@@ -62,12 +62,12 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
     const tasks = new Listr([
       {
         title: `${el}`,
-        skip: () => {
-          if (path.extname(el) !== '.png' && path.extname(el) !== '.jpg') {
-            return 'image non png or jpg format';
-          }
-          return false;
-        },
+        // skip: () => {
+        //   if (path.extname(el) !== '.png' && path.extname(el) !== '.jpg') {
+        //     return 'image non png or jpg format';
+        //   }
+        //   return false;
+        // },
         task: () => Promise.resolve(
           axios({
             method: 'get',
