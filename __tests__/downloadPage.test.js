@@ -33,20 +33,20 @@ const data = async () => {
   dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 };
 
-const dataWithImage = async () => {
-  nock('https://ru.hexlet.io')
-    .get('/courses')
-    .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
-  nock('https://ru.hexlet.io')
-    .get('/assets/professions/nodejs.png')
-    .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
-  dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
-};
+// const dataWithImage = async () => {
+//   nock('https://ru.hexlet.io')
+//     .get('/courses')
+//     .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
+//   nock('https://ru.hexlet.io')
+//     .get('/assets/professions/nodejs.png')
+//     .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
+//   dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
+// };
 
 describe.each([
-  ['styles.css', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
+  // ['styles.css', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
   ['downloadedWithAliases.html', '', 'ru-hexlet-io-courses.html'],
-  ['nodejs.png', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
+  // ['nodejs.png', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
 ])('downloadPage(%s, %s, %s)', (a, b, expected) => {
   test(`returns ${expected}`, async () => {
     await data();
@@ -70,13 +70,13 @@ test('return right object', async () => {
   expect(await downloadPage('https://ru.hexlet.io/courses', '/var/tmp')).toEqual(object);
 });
 
-test('modify page with image', async () => {
-  await dataWithImage();
-  await downloadPage('https://ru.hexlet.io/courses', dir);
-  const fileExpected = await fsp.readFile(getFixturePath('downloadedWithAliases.html'), 'utf-8');
-  const file = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses.html'), 'utf-8');
-  expect(file).toEqual(fileExpected);
-});
+// test('modify page with image', async () => {
+//   await dataWithImage();
+//   await downloadPage('https://ru.hexlet.io/courses', dir);
+//   const fileExpected = await fsp.readFile(getFixturePath('downloadedWithAliases.html'), 'utf-8');
+//   const file = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses.html'), 'utf-8');
+//   expect(file).toEqual(fileExpected);
+// });
 
 test('network error', async () => {
   nock.disableNetConnect();
