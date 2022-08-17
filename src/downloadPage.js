@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import 'axios-debug-log';
 import debug from 'debug';
+import Listr from 'listr';
 
 const { promises: fsp } = fs;
 const logPageLoader = debug('page-loader');
@@ -165,6 +166,18 @@ export default (url, dir = process.cwd()) => {
       const [html, images, links, scripts] = assets;
       fsp.writeFile(filePath, html);
       const obj = { filepath: filePath };
-      return [obj, images, links, scripts];
+      return Promise.all([...images, ...links, ...scripts])
+        .then((items) => {
+          items.forEach((el) => {
+            if (el !== undefined) {
+              const tasks = new Listr([{
+                title: `${el.data.responseUrl}`,
+                task: () => Promise.resolve(el),
+              }], { concurrent: true });
+              tasks.run();
+            }
+          });
+          return obj;
+        });
     });
 };
