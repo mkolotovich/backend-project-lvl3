@@ -73,7 +73,7 @@ test('return right object', async () => {
 test('modify page with image', async () => {
   await dataWithImage();
   await downloadPage('https://ru.hexlet.io/courses', dir);
-  const fileExpected = await fsp.readFile(getFixturePath('downloaded.html'), 'utf-8');
+  const fileExpected = await fsp.readFile(getFixturePath('downloadedWithAliases.html'), 'utf-8');
   const file = await fsp.readFile(path.resolve(dir, 'ru-hexlet-io-courses.html'), 'utf-8');
   expect(file).toEqual(fileExpected);
 });
@@ -85,8 +85,6 @@ test('network error', () => {
   });
 });
 
-test('dir read error', () => {
-  expect(() => {
-    downloadPage('https://ru.hexlet.io/courses', '/sys').toThrow();
-  });
+test('dir read error', async () => {
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow();
 });
