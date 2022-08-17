@@ -78,11 +78,9 @@ test('modify page with image', async () => {
   expect(file).toEqual(fileExpected);
 });
 
-test('network error', () => {
+test('network error', async () => {
   nock.disableNetConnect();
-  expect(() => {
-    downloadPage('https://ru.hexlet.io/courses', '/usr').toThrow();
-  });
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow();
 });
 
 test('dir read error', async () => {
