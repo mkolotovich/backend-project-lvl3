@@ -23,7 +23,6 @@ const getImages = ($, url, fullDirPath, dirPath, prefix) => {
       return axios({
         method: 'get',
         url: `${requestUrl}`,
-        responseType: 'stream',
       })
         .then((response) => {
           if (response.status !== successCode) {
@@ -170,7 +169,7 @@ export default (url, dir = process.cwd()) => {
           items.forEach((el) => {
             if (el !== undefined) {
               const tasks = new Listr([{
-                title: `${el.data.responseUrl}`,
+                title: `${el.config.url}`,
                 task: () => Promise.resolve(el),
               }], { concurrent: true });
               tasks.run();
