@@ -54,3 +54,11 @@ test('return right object', async () => {
   const object = JSON.parse(file);
   expect(await downloadPage('https://ru.hexlet.io/courses', '/var/tmp')).toEqual(object);
 });
+
+test('network error', async () => {
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow();
+});
+
+test('dir read error', async () => {
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow();
+});
