@@ -1,4 +1,3 @@
-// import { test, expect, beforeEach } from '@jest/globals';
 import {
   test, expect, beforeEach, describe,
 } from '@jest/globals';
@@ -77,9 +76,9 @@ test('dir read error', async () => {
 });
 
 describe.each([
-  ['styles.css', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
-  ['nodejs.png', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
-])('downloadPage(%s, %s, %s)', (a, b, expected) => {
+  ['ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
+  ['ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
+])('downloadPage(%s, %s, %s)', (b, expected) => {
   test(`save ${expected}`, async () => {
     nock('https://ru.hexlet.io')
       .get('/courses')
@@ -97,7 +96,6 @@ describe.each([
       .get('/packs/js/runtime.js')
       .reply(200);
     await downloadPage('https://ru.hexlet.io/courses', dir);
-    const source = await fsp.readFile(getFixturePath(a), 'utf-8');
-    expect(source).not.toBeNull();
+    expect(await fsp.readFile(path.resolve(dir, b, expected), 'utf-8')).not.toBeNull();
   });
 });
