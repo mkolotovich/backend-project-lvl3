@@ -97,7 +97,7 @@ describe.each([
       .get('/packs/js/runtime.js')
       .reply(200);
     await downloadPage('https://ru.hexlet.io/courses', dir);
-    const source = await fsp.readFile(getFixturePath(a));
-    expect(source).toEqual(await fsp.readFile(path.resolve(dir, b, expected)));
+    const source = await fsp.readFile(getFixturePath(a), 'utf-8');
+    expect(source).toEqual(await fsp.readFile(path.resolve(dir, b, expected), 'utf-8'));
   });
 });
