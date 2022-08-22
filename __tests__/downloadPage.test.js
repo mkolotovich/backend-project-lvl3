@@ -56,9 +56,16 @@ test('return right object', async () => {
 });
 
 test('network error', async () => {
-  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow();
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow(new Error('network error! https://ru.hexlet.io/courses not responded'));
+});
+
+test('parsing error', async () => {
+  nock('https://ru.hexlet.io')
+    .get('/courses')
+    .reply(200, await fsp.readFile(getFixturePath('expected.json'), 'utf-8'));
+  await expect(downloadPage('https://ru.hexlet.io/courses', dir)).rejects.toThrow(new Error('parsing error! page is not HTML format!'));
 });
 
 test('dir read error', async () => {
-  await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow();
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow(new Error('file error! EPERM: operation not permitted, mkdir /sys/ru-hexlet-io-courses_files'));
 });

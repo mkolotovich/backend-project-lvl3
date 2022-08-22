@@ -86,6 +86,7 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
         return axios({
           method: 'get',
           url: `${url}/${el}`,
+          responseType: 'stream',
         })
           .then((response) => {
             logPageLoader(`${url}/${el}`);
@@ -129,6 +130,9 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
 
 const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   const $ = cheerio.load(page);
+  if ($.parseHTML(page) === null) {
+    throw new Error('parsing error! page is not HTML format!');
+  }
   const images = getImages($, url, fullDirPath, dirPath, prefix);
   const links = getLinks($, url, fullDirPath, dirPath, prefix);
   const scripts = getScripts($, url, fullDirPath, dirPath, prefix);
@@ -163,8 +167,6 @@ export default (url, dir = process.cwd()) => {
     })
     .then((assets) => {
       const [html, images, links, scripts] = assets;
-      fsp.writeFile(filePath, html);
-      const obj = { filepath: filePath };
       return Promise.all([...images, ...links, ...scripts])
         .then((items) => {
           items.forEach((el) => {
@@ -176,7 +178,21 @@ export default (url, dir = process.cwd()) => {
               tasks.run();
             }
           });
-          return obj;
+          return html;
         });
+    })
+    .then((html) => fsp.writeFile(filePath, html))
+    .catch((error) => {
+      if (error.message.includes('network')) {
+        throw new Error(error.message);
+      } else if (error.message.includes('parsing')) {
+        throw new Error(error.message);
+      } else {
+        throw new Error(`file error! ${error.message}`);
+      }
+    })
+    .then(() => {
+      const obj = { filepath: filePath };
+      return obj;
     });
 };
