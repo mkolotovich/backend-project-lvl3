@@ -1,4 +1,7 @@
-import { test, expect, beforeEach } from '@jest/globals';
+// import { test, expect, beforeEach } from '@jest/globals';
+import {
+  test, expect, beforeEach, describe,
+} from '@jest/globals';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -71,4 +74,30 @@ test('dir read error', async () => {
     .get('/courses')
     .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
   await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow(new Error("file error! EACCES: permission denied, mkdir '/sys/ru-hexlet-io-courses_files'"));
+});
+
+describe.each([
+  ['styles.css', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
+  ['nodejs.png', 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
+])('downloadPage(%s, %s, %s)', (a, b, expected) => {
+  test(`save ${expected}`, async () => {
+    nock('https://ru.hexlet.io')
+      .get('/courses')
+      .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
+    nock('https://ru.hexlet.io')
+      .get('/assets/professions/nodejs.png')
+      .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
+    nock('https://ru.hexlet.io')
+      .get('/assets/application.css')
+      .reply(200, await fsp.readFile(getFixturePath('styles.css'), 'utf-8'));
+    nock('https://ru.hexlet.io')
+      .get('/courses')
+      .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
+    nock('https://ru.hexlet.io')
+      .get('/packs/js/runtime.js')
+      .reply(200);
+    await downloadPage('https://ru.hexlet.io/courses', dir);
+    const source = await fsp.readFile(getFixturePath(a));
+    expect(source).toEqual(await fsp.readFile(path.resolve(dir, b, expected)));
+  });
 });
