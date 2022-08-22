@@ -67,5 +67,8 @@ test('parsing error', async () => {
 });
 
 test('dir read error', async () => {
+  nock('https://ru.hexlet.io')
+    .get('/courses')
+    .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
   await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow(new Error('file error! EPERM: operation not permitted, mkdir /sys/ru-hexlet-io-courses_files'));
 });
