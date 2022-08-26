@@ -10,6 +10,7 @@ const { promises: fsp } = fs;
 const logPageLoader = debug('page-loader');
 
 const downloadAssets = ($, url, fullDirPath) => {
+  const pageUrl = new URL(url);
   const items = { img: 'src', link: 'href', script: 'src' };
   const promises = $('img, link, script').map((i, el) => {
     const requestUrl = new URL($(el).attr(items[el.tagName]), url);
@@ -32,6 +33,17 @@ const downloadAssets = ($, url, fullDirPath) => {
               logPageLoader(`${url}/${el}`);
               fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
             }
+            return response;
+          });
+      }
+      const elUrl = new URL($(el).attr(items[el.tagName]));
+      if (pageUrl.hostname === elUrl.hostname) {
+        return axios({
+          method: 'get',
+          url: `${elUrl}`,
+        })
+          .then((response) => {
+            fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
             return response;
           });
       }
@@ -69,7 +81,7 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   if ($.parseHTML(page) === null) {
     throw new Error('parsing error! page is not HTML format!');
   }
-  const assets = downloadAssets($, url, fullDirPath, prefix);
+  const assets = downloadAssets($, url, fullDirPath);
   modifyHtml($, dirPath, prefix, url);
   return [$.html(), assets];
 };
