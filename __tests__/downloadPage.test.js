@@ -58,7 +58,7 @@ test('return right object', async () => {
 });
 
 test('network error', async () => {
-  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow(new Error('network error! https://ru.hexlet.io/courses not responded'));
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow('No match for request');
 });
 
 test('parsing error', async () => {

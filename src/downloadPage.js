@@ -9,112 +9,49 @@ import Listr from 'listr';
 const { promises: fsp } = fs;
 const logPageLoader = debug('page-loader');
 
-const successCode = 200;
-
-const getImages = ($, url, fullDirPath, dirPath, prefix) => {
-  const imageTag = $('img');
-  const src = Array.from(imageTag).map((element) => $(element).attr('src'));
-  $('img').each(function modify(i, elem) {
-    $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
-  });
-  const promises = src.map((el) => {
-    const requestUrl = new URL(el, url);
-    if (!el.startsWith('http')) {
-      return axios({
-        method: 'get',
-        url: `${requestUrl}`,
-        responseType: 'stream',
-      })
-        .then((response) => {
-          if (response.status !== successCode) {
-            throw new Error(`network error! ${url}/${el} responded with status - ${response.status}`);
-          }
-          if (path.extname(el) === '.png' || path.extname(el) === '.jpg') {
-            logPageLoader(`${url}/${el}`);
-            const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
-            fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
-          } else {
-            return undefined;
-          }
-          return response;
-        });
-    }
-    return el;
-  });
-  return promises;
-};
-
-const getLinks = ($, url, fullDirPath, dirPath, prefix) => {
-  const linkTag = $('link');
-  const src = Array.from(linkTag).map((element) => $(element).attr('href'));
-  const promises = src.map((el) => {
-    const requestUrl = new URL(el, url);
-    if (!el.startsWith('http')) {
-      return axios({
-        method: 'get',
-        url: `${requestUrl}`,
-        responseType: 'stream',
-      })
-        .then((response) => {
-          if (response.status !== successCode) {
-            throw new Error(`network error! ${url}/${el} responded with status - ${response.status}`);
-          }
-          logPageLoader(`${url}/${el}`);
-          const normalizedStr = path.extname(el) === '.css' ? `${prefix}${el.replace(/\//g, '-')}` : `${prefix}${el.replace(/\//g, '-')}.html`;
-          fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
-          return response;
-        });
-    }
-    return undefined;
-  });
-  $('link').each(function modify(i, elem) {
-    if (!$(elem).attr('href').startsWith('http')) {
-      const normalizedStr = path.extname($(elem).attr('href')) === '.css' ? `${$(elem).attr('href').replace(/\//g, '-')}` : `${$(elem).attr('href').replace(/\//g, '-')}.html`;
-      $(this).attr('href', `${dirPath}/${prefix}${normalizedStr}`);
-    }
-  });
-  return promises;
-};
-
-const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
-  const scriptTag = $('script');
-  const pageUrl = new URL(url);
-  const src = Array.from(scriptTag).map((element) => $(element).attr('src'));
-  const promises = src.map((el) => {
-    if (el !== undefined) {
-      if (!el.startsWith('http')) {
+const downloadAssets = ($, url, fullDirPath) => {
+  const items = { img: 'src', link: 'href', script: 'src' };
+  const promises = $('img, link, script').map((i, el) => {
+    const requestUrl = new URL($(el).attr(items[el.tagName]), url);
+    if ($(el).attr(items[el.tagName]) !== undefined) {
+      if (!$(el).attr(items[el.tagName]).startsWith('http')) {
         return axios({
           method: 'get',
-          url: `${url}/${el}`,
+          url: `${requestUrl}`,
           responseType: 'stream',
         })
           .then((response) => {
-            logPageLoader(`${url}/${el}`);
-            const normalizedStr = `${prefix}${el.replace(/\//g, '-')}`;
-            fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
-            return response;
-          });
-      }
-      const elUrl = new URL(el);
-      if (pageUrl.hostname === elUrl.hostname) {
-        return axios({
-          method: 'get',
-          url: `${el}`,
-        })
-          .then((response) => {
-            if (response.status !== successCode) {
-              throw new Error(`network error! ${el} responded with status - ${response.status}`);
+            if (el.tagName === 'img') {
+              if (path.extname($(el).attr('src')) === '.png' || path.extname($(el).attr('src')) === '.jpg') {
+                logPageLoader(`${url}/${el}`);
+                fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
+              } else {
+                return undefined;
+              }
+            } else {
+              logPageLoader(`${url}/${el}`);
+              fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
             }
-            const normalizedStr = `${prefix}${elUrl.pathname.replace(/\//g, '-')}`;
-            fsp.writeFile(path.join(fullDirPath, normalizedStr), response.data);
             return response;
           });
       }
     }
     return undefined;
   });
-  $('script').each(function modify(i, elem) {
-    if ($(elem).attr('src') !== undefined) {
+  return promises;
+};
+
+const modifyHtml = ($, dirPath, prefix, url) => {
+  const pageUrl = new URL(url);
+  $('img, link, script').each(function modify(i, elem) {
+    if (elem.tagName === 'img') {
+      $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
+    } else if (elem.tagName === 'link') {
+      if (!$(elem).attr('href').startsWith('http')) {
+        const normalizedStr = path.extname($(elem).attr('href')) === '.css' ? `${$(elem).attr('href').replace(/\//g, '-')}` : `${$(elem).attr('href').replace(/\//g, '-')}.html`;
+        $(this).attr('href', `${dirPath}/${prefix}${normalizedStr}`);
+      }
+    } else if ($(elem).attr('src') !== undefined) {
       if (!$(elem).attr('src').startsWith('http')) {
         $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
       } else {
@@ -125,7 +62,6 @@ const getScripts = ($, url, fullDirPath, dirPath, prefix) => {
       }
     }
   });
-  return promises;
 };
 
 const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
@@ -133,41 +69,34 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   if ($.parseHTML(page) === null) {
     throw new Error('parsing error! page is not HTML format!');
   }
-  const images = getImages($, url, fullDirPath, dirPath, prefix);
-  const links = getLinks($, url, fullDirPath, dirPath, prefix);
-  const scripts = getScripts($, url, fullDirPath, dirPath, prefix);
-  return [$.html(), images, links, scripts];
+  const assets = downloadAssets($, url, fullDirPath, prefix);
+  modifyHtml($, dirPath, prefix, url);
+  return [$.html(), assets];
 };
 
+const getFileName = (url) => (url.pathname !== '/' ? `${url.hostname.replace(/\./g, '-')}${url.pathname.replace(/\//g, '-')}.html` : `${url.hostname.replace(/\./g, '-')}.html`);
+
+const getDirName = (url) => (url.pathname !== '/' ? `${url.hostname.replace(/\./g, '-')}${url.pathname.replace(/\//g, '-')}_files` : `${url.hostname.replace(/\./g, '-')}_files`);
+
+const getAssetsName = (url) => (url.pathname !== '/' ? `${url.hostname.replace(/\./g, '-')}` : `${url.hostname.replace(/\./g, '-')}-`);
+
 export default (url, dir = process.cwd()) => {
-  const myURL = new URL(url);
-  const fileName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}${myURL.pathname.replace(/\//g, '-')}.html` : `${myURL.hostname.replace(/\./g, '-')}.html`;
-  const dirName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}${myURL.pathname.replace(/\//g, '-')}_files` : `${myURL.hostname.replace(/\./g, '-')}_files`;
-  const assetsName = myURL.pathname !== '/' ? `${myURL.hostname.replace(/\./g, '-')}` : `${myURL.hostname.replace(/\./g, '-')}-`;
+  const urlObject = new URL(url);
+  const fileName = getFileName(urlObject);
+  const dirName = getDirName(urlObject);
+  const assetsName = getAssetsName(urlObject);
   const filePath = path.resolve(process.cwd(), dir, fileName);
-  const dirPath = path.resolve(process.cwd(), dir, dirName);
+  const dirPath = path.resolve(process.cwd(), dir);
   return axios.get(url)
     .then((response) => {
       logPageLoader(url);
-      if (response.status !== successCode) {
-        throw new Error(`network error! ${url} responded with status - ${response.status}`);
-      }
       return response;
     })
-    .then((response) => fsp.mkdir(dirPath)
+    .then((response) => fsp.mkdir(path.resolve(process.cwd(), dir, dirName))
       .then(() => getAssets(response.data, url, dirPath, dirName, assetsName)))
-    .catch((error) => {
-      if (error.response) {
-        throw new Error(`network error! ${url} responded with status - ${error.response.status}`);
-      } else if (error.request) {
-        throw new Error(`network error! ${url} not responded`);
-      } else {
-        throw new Error(error.message);
-      }
-    })
-    .then((assets) => {
-      const [html, images, links, scripts] = assets;
-      return Promise.all([...images, ...links, ...scripts])
+    .then((data) => {
+      const [html, assets] = data;
+      return Promise.all(assets)
         .then((items) => {
           items.forEach((el) => {
             if (el !== undefined) {
@@ -182,15 +111,6 @@ export default (url, dir = process.cwd()) => {
         });
     })
     .then((html) => fsp.writeFile(filePath, html))
-    .catch((error) => {
-      if (error.message.includes('network')) {
-        throw new Error(error.message);
-      } else if (error.message.includes('parsing')) {
-        throw new Error(error.message);
-      } else {
-        throw new Error(`file error! ${error.message}`);
-      }
-    })
     .then(() => {
       const obj = { filepath: filePath };
       return obj;
