@@ -21,6 +21,31 @@ beforeEach(async () => {
   dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
+describe.each([
+  ['ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
+  ['ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
+])('downloadPage(%s, %s, %s)', (b, expected) => {
+  test(`save ${expected}`, async () => {
+    nock('https://ru.hexlet.io')
+      .get('/courses')
+      .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
+    nock('https://ru.hexlet.io')
+      .get('/assets/professions/nodejs.png')
+      .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
+    nock('https://ru.hexlet.io')
+      .get('/assets/application.css')
+      .reply(200, await fsp.readFile(getFixturePath('styles.css'), 'utf-8'));
+    nock('https://ru.hexlet.io')
+      .get('/courses')
+      .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
+    nock('https://ru.hexlet.io')
+      .get('/packs/js/runtime.js')
+      .reply(200);
+    await downloadPage('https://ru.hexlet.io/courses', dir);
+    expect(await fsp.readFile(path.resolve(dir, b, expected), 'utf-8')).not.toBeNull();
+  });
+});
+
 test('modify page', async () => {
   nock('https://ru.hexlet.io')
     .get('/courses')
@@ -79,29 +104,4 @@ test('dir read error', async () => {
     .get('/courses')
     .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
   await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow(new Error("EACCES: permission denied, mkdir '/sys/ru-hexlet-io-courses_files'"));
-});
-
-describe.each([
-  ['ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'],
-  ['ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'],
-])('downloadPage(%s, %s, %s)', (b, expected) => {
-  test(`save ${expected}`, async () => {
-    nock('https://ru.hexlet.io')
-      .get('/courses')
-      .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
-    nock('https://ru.hexlet.io')
-      .get('/assets/professions/nodejs.png')
-      .reply(200, await fsp.readFile(getFixturePath('nodejs.png')));
-    nock('https://ru.hexlet.io')
-      .get('/assets/application.css')
-      .reply(200, await fsp.readFile(getFixturePath('styles.css'), 'utf-8'));
-    nock('https://ru.hexlet.io')
-      .get('/courses')
-      .reply(200, await fsp.readFile(getFixturePath('sourceWithAliases.html'), 'utf-8'));
-    nock('https://ru.hexlet.io')
-      .get('/packs/js/runtime.js')
-      .reply(200);
-    await downloadPage('https://ru.hexlet.io/courses', dir);
-    expect(await fsp.readFile(path.resolve(dir, b, expected), 'utf-8')).not.toBeNull();
-  });
 });
