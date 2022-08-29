@@ -58,7 +58,13 @@ test('return right object', async () => {
 });
 
 test('network error', async () => {
-  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow('No match for request');
+  nock('https://ru.hexlet.io')
+    .get('/courses')
+    .reply(404, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
+  nock('https://ru.hexlet.io')
+    .get('/assets/professions/nodejs.png')
+    .reply(404, await fsp.readFile(getFixturePath('nodejs.png')));
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/usr')).rejects.toThrow(new Error('Request failed with status code 404'));
 });
 
 test('parsing error', async () => {
@@ -72,7 +78,7 @@ test('dir read error', async () => {
   nock('https://ru.hexlet.io')
     .get('/courses')
     .reply(200, await fsp.readFile(getFixturePath('source.html'), 'utf-8'));
-  await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow(new Error("file error! EACCES: permission denied, mkdir '/sys/ru-hexlet-io-courses_files'"));
+  await expect(downloadPage('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow(new Error("EACCES: permission denied, mkdir '/sys/ru-hexlet-io-courses_files'"));
 });
 
 describe.each([
