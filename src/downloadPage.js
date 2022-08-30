@@ -9,78 +9,74 @@ import Listr from 'listr';
 const { promises: fsp } = fs;
 const logPageLoader = debug('page-loader');
 
+const checkExtension = ($, el) => (path.extname($(el).attr('src')) === '.png' || path.extname($(el).attr('src')) === '.jpg');
+
 const downloadAssets = ($, url, fullDirPath) => {
   const pageUrl = new URL(url);
   const items = { img: 'src', link: 'href', script: 'src' };
-  const promises = $('img, link, script').map((i, el) => {
+  const tagsWithAttr = $('img, link, script').filter((i, el) => $(el).attr(items[el.tagName]));
+  const correctExtensions = tagsWithAttr.filter((i, el) => (el.tagName === 'img' ? checkExtension($, el) : el));
+  const localAssets = correctExtensions.filter((i, el) => {
+    const elUrl = new URL($(el).attr(items[el.tagName]), url);
+    return elUrl.hostname === pageUrl.hostname;
+  });
+  const promises = localAssets.map((i, el) => {
     const requestUrl = new URL($(el).attr(items[el.tagName]), url);
-    if ($(el).attr(items[el.tagName]) !== undefined) {
-      if (!$(el).attr(items[el.tagName]).startsWith('http')) {
-        return axios({
-          method: 'get',
-          url: `${requestUrl}`,
-          responseType: 'stream',
-        })
-          .then((response) => {
-            if (el.tagName === 'img') {
-              if (path.extname($(el).attr('src')) === '.png' || path.extname($(el).attr('src')) === '.jpg') {
-                logPageLoader(`${url}/${el}`);
-                fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
-              } else {
-                return undefined;
-              }
-            } else {
-              logPageLoader(`${url}/${el}`);
-              fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
-            }
-            return response;
-          });
-      }
-      const elUrl = new URL($(el).attr(items[el.tagName]));
-      if (pageUrl.hostname === elUrl.hostname) {
-        return axios({
-          method: 'get',
-          url: `${elUrl}`,
-        })
-          .then((response) => {
-            fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
-            return response;
-          });
-      }
-    }
-    return undefined;
+    return axios({
+      method: 'get',
+      url: `${requestUrl}`,
+      responseType: 'stream',
+    })
+      .then((response) => {
+        logPageLoader(`${url}/${el}`);
+        fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
+        return response;
+      });
   });
   return promises;
 };
 
+const isTheUrlAbsolutely = ($, elem) => {
+  const items = { img: 'src', link: 'href', script: 'src' };
+  return $(elem).attr(items[elem.tagName]).startsWith('http');
+};
+
+const isLocalAsset = (pageUrl, elUrl) => pageUrl.hostname === elUrl.hostname;
+
+const modifyImg = ($, elem, dirPath, prefix) => (checkExtension($, elem) ? $(elem).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`) : elem);
+const modifyLink = ($, elem, dirPath, prefix) => {
+  const normalizedStr = path.extname($(elem).attr('href')) === '.css' ? `${$(elem).attr('href').replace(/\//g, '-')}` : `${$(elem).attr('href').replace(/\//g, '-')}.html`;
+  return !isTheUrlAbsolutely($, elem) ? $(elem).attr('href', `${dirPath}/${prefix}${normalizedStr}`) : elem;
+};
+const modifyScript = ($, elem, dirPath, prefix, pageUrl) => (!isTheUrlAbsolutely($, elem) ? $(elem).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`) : isLocalAsset(pageUrl, new URL($(elem).attr('src'))) && $(elem).attr('src', `${dirPath}/${prefix}${new URL($(elem).attr('src')).pathname.replace(/\//g, '-')}`));
+
 const modifyHtml = ($, dirPath, prefix, url) => {
   const pageUrl = new URL(url);
-  $('img, link, script').each(function modify(i, elem) {
-    if (elem.tagName === 'img') {
-      $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
-    } else if (elem.tagName === 'link') {
-      if (!$(elem).attr('href').startsWith('http')) {
-        const normalizedStr = path.extname($(elem).attr('href')) === '.css' ? `${$(elem).attr('href').replace(/\//g, '-')}` : `${$(elem).attr('href').replace(/\//g, '-')}.html`;
-        $(this).attr('href', `${dirPath}/${prefix}${normalizedStr}`);
-      }
-    } else if ($(elem).attr('src') !== undefined) {
-      if (!$(elem).attr('src').startsWith('http')) {
-        $(this).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`);
-      } else {
-        const elUrl = new URL($(elem).attr('src'));
-        if (pageUrl.hostname === elUrl.hostname) {
-          $(this).attr('src', `${dirPath}/${prefix}${elUrl.pathname.replace(/\//g, '-')}`);
-        }
-      }
+  $('img, link, script').each((i, elem) => {
+    switch (elem.tagName) {
+      case 'img':
+        modifyImg($, elem, dirPath, prefix);
+        break;
+      case 'link':
+        modifyLink($, elem, dirPath, prefix);
+        break;
+      case 'script':
+        modifyScript($, elem, dirPath, prefix, pageUrl);
+        break;
+      default:
+        $(elem);
     }
   });
 };
 
+const validateHtml = ($, page) => {
+  const error = () => { throw new Error('parsing error! page is not valid!'); };
+  return $.parseHTML(page) === null ? error() : page;
+};
+
 const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   const $ = cheerio.load(page);
-  if ($.parseHTML(page) === null) {
-    throw new Error('parsing error! page is not HTML format!');
-  }
+  validateHtml($, page);
   const assets = downloadAssets($, url, fullDirPath);
   modifyHtml($, dirPath, prefix, url);
   return [$.html(), assets];
@@ -111,13 +107,11 @@ export default (url, dir = process.cwd()) => {
       return Promise.all(assets)
         .then((items) => {
           items.forEach((el) => {
-            if (el !== undefined) {
-              const tasks = new Listr([{
-                title: `${el.data.responseUrl}`,
-                task: () => Promise.resolve(el),
-              }], { concurrent: true });
-              tasks.run();
-            }
+            const tasks = new Listr([{
+              title: `${el.data.responseUrl}`,
+              task: () => Promise.resolve(el),
+            }], { concurrent: true });
+            tasks.run();
           });
           return html;
         });
