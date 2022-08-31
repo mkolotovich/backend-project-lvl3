@@ -80,17 +80,24 @@ const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   return [$.html(), assets];
 };
 
-const getCorrectName = (url) => {
+const getCorrectName = (url, prefix = false) => {
   const normalizedHost = url.hostname.split('').map((el) => (el === '.' ? '-' : el)).join('');
   const normalizedPath = url.pathname.split('').map((el) => (el === '/' ? '-' : el)).join('');
-  return url.pathname !== '/' ? `${normalizedHost}${normalizedPath}` : normalizedHost;
+  switch (prefix) {
+    case false:
+      return url.pathname !== '/' ? `${normalizedHost}${normalizedPath}` : normalizedHost;
+    case true:
+      return normalizedHost;
+    default:
+      throw new Error('unexpected prefix!');
+  }
 };
 
 export default (url, dir = process.cwd()) => {
   const urlObject = new URL(url);
   const fileName = `${getCorrectName(urlObject)}.html`;
   const dirName = `${getCorrectName(urlObject)}_files`;
-  const assetsName = urlObject.pathname !== '/' ? getCorrectName(urlObject) : `${getCorrectName(urlObject)}-`;
+  const assetsName = urlObject.pathname !== '/' ? getCorrectName(urlObject, true) : `${getCorrectName(urlObject, true)}-`;
   const filePath = path.resolve(process.cwd(), dir, fileName);
   const dirPath = path.resolve(process.cwd(), dir);
   return axios.get(url)
