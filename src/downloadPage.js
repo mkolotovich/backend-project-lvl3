@@ -11,35 +11,30 @@ const logPageLoader = debug('page-loader');
 
 const checkExtension = ($, el) => (path.extname($(el).attr('src')) === '.png' || path.extname($(el).attr('src')) === '.jpg');
 
-const downloadAssets = ($, url, fullDirPath) => {
+const filterAssets = ($, url) => {
   const pageUrl = new URL(url);
-  const items = { img: 'src', link: 'href', script: 'src' };
-  const tagsWithAttr = $('img, link, script').filter((i, el) => $(el).attr(items[el.tagName]));
-  const correctExtensions = tagsWithAttr.filter((i, el) => (el.tagName === 'img' ? checkExtension($, el) : el));
-  const localAssets = correctExtensions.filter((i, el) => {
-    const elUrl = new URL($(el).attr(items[el.tagName]), url);
-    return elUrl.hostname === pageUrl.hostname;
-  });
-  const promises = localAssets.map((i, el) => {
-    const requestUrl = new URL($(el).attr(items[el.tagName]), url);
-    return axios({
-      method: 'get',
-      url: `${requestUrl}`,
-      responseType: 'stream',
-    })
-      .then((response) => {
-        logPageLoader(`${url}/${el}`);
-        fsp.writeFile(path.join(fullDirPath, `${$(el).attr(items[el.tagName])}`), response.data);
-        return response;
-      });
-  });
-  return promises;
+  const tagMap = { img: 'src', link: 'href', script: 'src' };
+  return $('img, link, script')
+    .filter((i, el) => $(el).attr(tagMap[el.tagName]))
+    .filter((i, el) => (el.tagName === 'img' ? checkExtension($, el) : el))
+    .map((i, el) => ({ el, elUrl: new URL($(el).attr(tagMap[el.tagName]), url) }))
+    .filter((i, { elUrl }) => elUrl.hostname === pageUrl.hostname);
 };
 
-const isTheUrlAbsolutely = ($, elem) => {
-  const items = { img: 'src', link: 'href', script: 'src' };
-  return $(elem).attr(items[elem.tagName]).startsWith('http');
-};
+const tagMap = { img: 'src', link: 'href', script: 'src' };
+
+const downloadAssets = ($, fullDirPath, assets) => assets.map((i, { el, elUrl }) => axios({
+  method: 'get',
+  url: `${elUrl}`,
+  responseType: 'stream',
+})
+  .then((response) => {
+    logPageLoader(`${elUrl}`);
+    fsp.writeFile(path.join(fullDirPath, `${$(el).attr(tagMap[el.tagName])}`), response.data);
+    return response;
+  }));
+
+const isTheUrlAbsolutely = ($, elem) => $(elem).attr(tagMap[elem.tagName]).startsWith('http');
 
 const isLocalAsset = (pageUrl, elUrl) => pageUrl.hostname === elUrl.hostname;
 
@@ -48,7 +43,9 @@ const modifyLink = ($, elem, dirPath, prefix) => {
   const normalizedStr = path.extname($(elem).attr('href')) === '.css' ? `${$(elem).attr('href').replace(/\//g, '-')}` : `${$(elem).attr('href').replace(/\//g, '-')}.html`;
   return !isTheUrlAbsolutely($, elem) ? $(elem).attr('href', `${dirPath}/${prefix}${normalizedStr}`) : elem;
 };
-const modifyScript = ($, elem, dirPath, prefix, pageUrl) => (!isTheUrlAbsolutely($, elem) ? $(elem).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`) : isLocalAsset(pageUrl, new URL($(elem).attr('src'))) && $(elem).attr('src', `${dirPath}/${prefix}${new URL($(elem).attr('src')).pathname.replace(/\//g, '-')}`));
+const modifyScript = ($, elem, dirPath, prefix, pageUrl) => (!isTheUrlAbsolutely($, elem)
+  ? $(elem).attr('src', `${dirPath}/${prefix}${$(elem).attr('src').replace(/\//g, '-')}`)
+  : isLocalAsset(pageUrl, new URL($(elem).attr('src'))) && $(elem).attr('src', `${dirPath}/${prefix}${new URL($(elem).attr('src')).pathname.replace(/\//g, '-')}`));
 
 const modifyHtml = ($, dirPath, prefix, url) => {
   const pageUrl = new URL(url);
@@ -77,42 +74,39 @@ const validateHtml = ($, page) => {
 const getAssets = (page, url, fullDirPath, dirPath, prefix) => {
   const $ = cheerio.load(page);
   validateHtml($, page);
-  const assets = downloadAssets($, url, fullDirPath);
+  const filteredAssets = filterAssets($, url);
+  const assets = downloadAssets($, fullDirPath, filteredAssets);
   modifyHtml($, dirPath, prefix, url);
   return [$.html(), assets];
 };
 
-const getFileName = (url) => (url.pathname !== '/' ? `${url.hostname.replace(/\./g, '-')}${url.pathname.replace(/\//g, '-')}.html` : `${url.hostname.replace(/\./g, '-')}.html`);
-
-const getDirName = (url) => (url.pathname !== '/' ? `${url.hostname.replace(/\./g, '-')}${url.pathname.replace(/\//g, '-')}_files` : `${url.hostname.replace(/\./g, '-')}_files`);
-
-const getAssetsName = (url) => (url.pathname !== '/' ? `${url.hostname.replace(/\./g, '-')}` : `${url.hostname.replace(/\./g, '-')}-`);
+const getCorrectName = (url) => {
+  const normalizedHost = url.hostname.split('').map((el) => (el === '.' ? '-' : el)).join('');
+  const normalizedPath = url.pathname.split('').map((el) => (el === '/' ? '-' : el)).join('');
+  return url.pathname !== '/' ? `${normalizedHost}${normalizedPath}` : normalizedHost;
+};
 
 export default (url, dir = process.cwd()) => {
   const urlObject = new URL(url);
-  const fileName = getFileName(urlObject);
-  const dirName = getDirName(urlObject);
-  const assetsName = getAssetsName(urlObject);
+  const fileName = `${getCorrectName(urlObject)}.html`;
+  const dirName = `${getCorrectName(urlObject)}_files`;
+  const assetsName = urlObject.pathname !== '/' ? getCorrectName(urlObject) : `${getCorrectName(urlObject)}-`;
   const filePath = path.resolve(process.cwd(), dir, fileName);
   const dirPath = path.resolve(process.cwd(), dir);
   return axios.get(url)
-    .then((response) => {
-      logPageLoader(url);
-      return response;
-    })
     .then((response) => fsp.mkdir(path.resolve(process.cwd(), dir, dirName))
       .then(() => getAssets(response.data, url, dirPath, dirName, assetsName)))
     .then((data) => {
+      logPageLoader(url);
       const [html, assets] = data;
       return Promise.all(assets)
         .then((items) => {
-          items.forEach((el) => {
-            const tasks = new Listr([{
-              title: `${el.data.responseUrl}`,
-              task: () => Promise.resolve(el),
-            }], { concurrent: true });
-            tasks.run();
-          });
+          const tasksForListr = items.map((el) => ({
+            title: `${el.data.responseUrl}`,
+            task: () => Promise.resolve(el),
+          }));
+          const tasks = new Listr(tasksForListr, { concurrent: true });
+          tasks.run();
           return html;
         });
     })
