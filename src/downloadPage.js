@@ -29,7 +29,7 @@ const filterAssets = (page, url, dir) => {
     .each((i, { el, elUrl }) => {
       switch (el.tagName) {
         case 'link':
-          return $(el).attr('href', `${dir}/${getCorrectName(elUrl)}`);
+          return path.extname($(el).attr('href')) === '.css' ? $(el).attr('href', `${dir}/${getCorrectName(elUrl)}`) : $(el).attr('href', `${dir}/${getCorrectName(elUrl)}.html`);
         default:
           return $(el).attr('src', `${dir}/${getCorrectName(elUrl)}`);
       }
