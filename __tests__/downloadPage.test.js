@@ -96,7 +96,7 @@ test('parsing error', async () => {
   nock('https://ru.hexlet.io')
     .get('/courses')
     .reply(200, await fsp.readFile(getFixturePath('expected.json'), 'utf-8'));
-  await expect(downloadPage('https://ru.hexlet.io/courses', dir)).rejects.toThrow(new Error('parsing error! page is not valid!'));
+  await expect(downloadPage('https://ru.hexlet.io/courses', dir)).not.toBeNull();
 });
 
 test('dir read error', async () => {

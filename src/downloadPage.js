@@ -8,8 +8,6 @@ import Listr from 'listr';
 
 const logPageLoader = debug('page-loader');
 
-const checkExtension = ($, el) => (path.extname($(el).attr('src')) === '.png' || path.extname($(el).attr('src')) === '.jpg');
-
 const getCorrectName = (url) => {
   const normalizedHost = url.hostname.split('').map((el) => (el === '.' ? '-' : el)).join('');
   const normalizedPath = url.pathname.split('').map((el) => (el === '/' ? '-' : el)).join('');
@@ -19,11 +17,10 @@ const getCorrectName = (url) => {
 const tagMap = { img: 'src', link: 'href', script: 'src' };
 
 const filterAssets = (page, url, dir) => {
-  const $ = cheerio.load(page).parseHTML(page) === null ? () => { throw new Error('parsing error! page is not valid!'); } : cheerio.load(page);
+  const $ = cheerio.load(page);
   const pageUrl = new URL(url);
   const assets = $('img, link, script')
     .filter((i, el) => $(el).attr(tagMap[el.tagName]))
-    .filter((i, el) => (el.tagName === 'img' ? checkExtension($, el) : el))
     .map((i, el) => ({ el, elUrl: new URL($(el).attr(tagMap[el.tagName]), url) }))
     .filter((i, { elUrl }) => elUrl.hostname === pageUrl.hostname)
     .each((i, { el, elUrl }) => {
@@ -54,27 +51,27 @@ export default (url, dir = process.cwd()) => {
   const filePath = path.resolve(process.cwd(), dir, fileName);
   const dirPath = path.resolve(process.cwd(), dir);
   return axios.get(url)
+    .then((response) => {
+      logPageLoader('create (if not exists) directory for assets', url);
+      return response;
+    })
     .then((response) => fsp.mkdir(path.resolve(process.cwd(), dir, dirName))
-      .then(() => logPageLoader('create (if not exists) directory for assets', url))
       .then(() => filterAssets(response.data, url, dirName)))
     .then((data) => {
       const [html, assets] = data;
-      const tasks = new Listr([], { concurrent: true });
-      assets.each((i, asset) => {
+      logPageLoader('write html file', filePath);
+      fsp.writeFile(filePath, html);
+      const tasks = assets.map((i, asset) => {
         const { el, elUrl } = asset;
         logPageLoader('load asset', elUrl.toString(), el.attribs[tagMap[el.tagName]]);
-        return tasks.add([
-          {
-            title: `${elUrl}`,
-            task: () => Promise.resolve(downloadAsset(dirPath, asset)),
-          },
-        ]);
+        return {
+          title: elUrl.toString(),
+          task: () => downloadAsset(dirPath, asset),
+        };
       });
-      tasks.run();
-      return html;
+      const listr = new Listr(tasks.toArray(), { concurrent: true });
+      return listr.run();
     })
-    .then((html) => fsp.writeFile(filePath, html))
-    .then(() => logPageLoader('write html file', filePath))
     .then(() => {
       const obj = { filepath: filePath };
       return obj;
