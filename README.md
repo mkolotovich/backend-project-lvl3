@@ -6,6 +6,7 @@ PageLoader – утилита командной строки, которая с
 1. Убедитесь, что у вас установлена Node.js версии 13 и выше. В противном случае установите Node.js версии 13 и выше.
 2. Установите пакет в систему с помощью npm link и убедитесь в том, что он работает, запустив page-loader -h в терминале. Команду npm link необходимо запускать из корневой директории проекта.
 3. Пример использования:
+```
 page-loader --output /var/tmp https://ru.hexlet.io/courses
 
 ✔ https://ru.hexlet.io/lessons.rss
@@ -18,7 +19,7 @@ page-loader --output /var/tmp https://ru.hexlet.io/courses
 ✔ https://ru.hexlet.io/assets/favicon-128.png
 
 Page was downloaded as 'ru-hexlet-io-courses.html'
-
+```
 ### Hexlet tests and linter status:
 [![Actions Status](https://github.com/mkolotovich/backend-project-lvl3/workflows/hexlet-check/badge.svg)](https://github.com/mkolotovich/backend-project-lvl3/actions)
 [![Actions Status](https://github.com/mkolotovich/backend-project-lvl3/actions/workflows/ESLint&tests.yml/badge.svg)](https://github.com/mkolotovich/frontend-project-lvl3/actions)
